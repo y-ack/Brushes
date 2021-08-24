@@ -1,0 +1,267 @@
+-- -*- coding: utf-8; mode: lua -*-
+-- 筆（墨）3 by Medibang. Inc.
+-- Modified by Y to allow dynamic pressure
+
+first_call = true
+point_count = 0
+max_width = 0
+max_alpha = 0
+last_x = nil
+last_y = nil
+
+line_rnd = {}
+pos = {}
+r, g, b, o = nil, nil, nil, nil
+
+
+function param1()
+  n = "Number of lines"
+  if bs_lang() == "ja" then
+    n = "描画本数"
+  end
+  return n, 3, 20, 10
+end
+
+function param2()
+  n = "Roughness"
+  if bs_lang() == "ja" then
+    n = "かすれ"
+  end
+  return n, 0, 100, 100
+end
+
+function param3()
+  n = "Changing opacity"
+  if bs_lang() == "ja" then
+    n = "不透明度調整"
+  end
+  return n, 0, 1, 0
+end
+function param4()
+  n = "Use pressure"
+  if bs_lang() == "ja" then
+    n = "筆圧感知"
+  end
+  return n, 0, 1, 1
+end
+function param5()
+  -- 0.5x (0) to 1.5x (20)
+  n = "Pressure multiplier"
+  if bs_lang() == "ja" then
+    n = "筆圧乗数"
+  end
+  return n, 0, 20, 12
+end
+function param6()
+  -- minimum value for pressure curve
+  n = "Pressure offset"
+  if bs_lang() == "ja" then
+    n = "筆圧調節"
+  end
+  return n, 0, 50, 0
+end
+function param7()
+  -- average the last n pressure values
+  n = "Pressure smoothing"
+  if bs_lang() == "ja" then
+    n = "筆圧平滑化"
+  end
+  return n, 1, 25, 1
+end
+
+
+function curved_pressure(p)
+  return math.min(math.max(bs_param6()/100, bs_param6()/100 + p * (1.0 + (bs_param5()-10)/20.0)), 1.0)
+end
+function smooth_curved_pressure()
+  sp = 0
+  local i, a = 0, math.min(bs_param7(), point_count)
+  for i = 0, a do
+    sp = sp + pos[point_count - i].p
+  end
+  return sp/(a+1)
+end
+
+
+function default_size()
+  return 15, 0.1
+end
+
+function init(x, y, p)
+  if bs_param3() == 1 then
+    bs_setmode(1)
+  end
+  math.randomseed(bs_ms())
+  local i
+  for i = 0, bs_param1() do
+    -- as an idiom, this is "stroke random values"
+    -- random values that have to be coherent throughout the stroke
+    line_rnd[i] = {}
+    line_rnd[i].rnd = math.random(100) / 1000
+    line_rnd[i].xrnd = math.random(100) / 100 - 0.5
+    line_rnd[i].yrnd = math.random(100) / 100 - 0.5
+  end
+  r, g, b = bs_fore()
+  o = bs_opaque()
+end
+
+function main(x, y, p)
+  local w = bs_width()
+  if first_call then
+    init(x, y, p)
+    first_call = false
+  else
+    if bs_distance(x - last_x, y - last_y) < w / 50 then
+      return 0
+    end
+  end
+
+  local a = o * 255
+
+  local dx, dy = bs_dir()
+  local rad = bs_atan(dx, dy)
+  if bs_param4()==0 then -- original code
+    pos[point_count] = {}
+    pos[point_count].x = x
+    pos[point_count].y = y
+    pos[point_count].rad = rad
+    --pos[point_count].w = w
+    --pos[point_count].p = p
+    --pos[point_count].a = a
+    bs_ellipse(x, y, w, w, 0, r, g, b, a)
+    if max_width < w then
+      max_width = w
+    end
+    if max_alpha < a then
+      max_alpha = a
+    end
+  else -- use pressure
+    pos[point_count] = {}
+    pos[point_count].p = curved_pressure(p)
+    drawP({x=x, y=y, rad=rad}, p)
+    if max_width < w then
+      max_width = w
+    end
+    if max_alpha < a then
+      max_alpha = a
+    end
+  end
+  point_count = point_count + 1
+  last_x = x
+  last_y = y
+  return 1
+end
+
+function last(x, y, p)
+  if bs_param4() == 0 then
+    -- originally did a post-processing step
+    bs_reset()
+    draw()
+    return 1
+  end
+  return 0
+end
+
+-- dynamic pressure-based draw
+function drawP(v, pressure)
+  -- 最大サイズ
+  local maxW = max_width * 0.8
+  local maxA = max_alpha
+  local c = 2--point_count
+  local i, j
+  i = 2
+  local p = smooth_curved_pressure()
+  for j = 0, bs_param1() do
+    local rnd = line_rnd[j].rnd
+    local pp = 0.40 + bs_param2() / 500 + rnd
+    local p1, p2, p3 = c * pp, c * (1 - pp), 1 / pp
+    local ofx, ofy = max_width * (line_rnd[j].xrnd), max_width * (line_rnd[j].yrnd)
+    if j == 0 then
+      ofx, ofy = 0, 0
+    end
+    local drawn = false
+    local ox, oy = bs_rotate(ofx, ofy, v.rad)
+    local dx, dy = v.x + ox, v.y + oy
+    local w = 0
+    local a = 0
+    local adjust = 3 / (max_width / 50)
+    if bs_param3() == 1 then
+      adjust = 1
+    end
+    if i == 1 or i == c - 1 then
+      w, a = maxW, maxA
+      bs_ellipse(dx, dy, w, w, 0, r, g, b, a)
+      drawn = true
+    end
+    if i <= p1 then
+      w = maxW * (pp - p) * p3 -- 
+      a = maxA * (pp - p) * p3 / adjust
+      bs_ellipse(dx, dy, w, w, 0, r, g, b, a)
+      drawn = true
+    end
+    if p2 <= i then
+      w = maxW * (p - (1 - pp)) * p3
+      a = maxA * (p - (1 - pp)) * p3 / adjust
+      bs_ellipse(dx, dy, w, w, 0, r, g, b, a)
+      drawn = true
+    end
+    if not drawn then
+      --bs_ellipse(dx, dy, 1, 1, 0, r, g, b, 255)
+    end
+  end
+end
+
+-- original post-processing draw 
+-- using a list of points and lightening middle
+function draw()
+  -- 最大サイズ
+  local maxW = max_width * 0.8
+  local maxA = max_alpha
+  local c = point_count
+  if c < 5 then
+    return
+  end
+  local i, j
+  for j = 0, bs_param1() do
+    local rnd = math.random(100) / 1000
+    local pp = 0.40 + bs_param2() / 500 + rnd
+    local p1, p2, p3 = c * pp, c * (1 - pp), 1 / pp
+    local ofx, ofy = max_width * (math.random(100) / 100 - 0.5), max_width * (math.random(100) / 100 - 0.5)
+    if j == 0 then
+      ofx, ofy = 0, 0
+    end
+    for i = 0, c - 1 do
+      local drawn = false
+      local p = i / c
+      local v = pos[i]
+      local ox, oy = bs_rotate(ofx, ofy, v.rad)
+      local dx, dy = v.x + ox, v.y + oy
+      local w = 0
+      local a = 0
+      local adjust = 3 / (max_width / 50)
+      if bs_param3() == 1 then
+        adjust = 1
+      end
+      if i == 1 or i == c - 1 then
+        w, a = maxW, maxA
+        bs_ellipse(dx, dy, w, w, 0, r, g, b, a)
+        drawn = true
+      end
+      if i <= p1 then
+        w = maxW * (pp - p) * p3
+        a = maxA * (pp - p) * p3 / adjust
+        bs_ellipse(dx, dy, w, w, 0, r, g, b, a)
+        drawn = true
+      end
+      if p2 <= i then
+        w = maxW * (p - (1 - pp)) * p3
+        a = maxA * (p - (1 - pp)) * p3 / adjust
+        bs_ellipse(dx, dy, w, w, 0, r, g, b, a)
+        drawn = true
+      end
+      if not drawn then
+        --bs_ellipse(dx, dy, 1, 1, 0, r, g, b, 255)
+      end
+    end
+  end
+end
