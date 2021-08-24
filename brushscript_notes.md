@@ -13,6 +13,8 @@ the api does not expose ways to listen for position changes in order to abort a 
 
 but maybe with some very tricky lua something could yet be done...
 
+list of members exposed to lua context: https://gist.github.com/y-ack/a0a8517cf8e450c86d101e87614e26b2
+
 
 === per-stroke randomness ===
 
