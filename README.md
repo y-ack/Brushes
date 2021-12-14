@@ -1,6 +1,9 @@
 # Brushes
 repository for brushes (firealpaca/medibang paint lua brush scripts and krita brush presets)
 
+[(notes on developing FireAlpaca brush scripts)](brushscript_notes.md)
+
+
 ## Sumi-WithPressure.bs
 this is a modified version of a calligraphy-type brush from medi.
 the original brush is clever in that it saves a list of points and then redraws the stroke,
