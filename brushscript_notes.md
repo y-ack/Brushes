@@ -1,4 +1,4 @@
-=== drawing engine ===
+### === drawing engine ===
 
 firealpaca drawing seems to work something like this...
  - an individual dab is triggered by unique canvas position (determined by some min distance from prev dab)
@@ -16,7 +16,7 @@ but maybe with some very tricky lua something could yet be done...
 list of members exposed to lua context: https://gist.github.com/y-ack/a0a8517cf8e450c86d101e87614e26b2
 
 
-=== per-stroke randomness ===
+### === per-stroke randomness ===
 
 the original Sumi.bs used an interesting idiom:
 it recorded dabs into a `pos = {}` array
