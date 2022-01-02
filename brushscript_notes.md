@@ -15,6 +15,9 @@ but maybe with some very tricky lua something could yet be done...
 
 list of members exposed to lua context: https://gist.github.com/y-ack/a0a8517cf8e450c86d101e87614e26b2
 
+#### === canvas border behavior ===
+![drawing past X=0 and Y=0 clamps?](https://user-images.githubusercontent.com/12588017/147865348-d0f54663-70ed-452b-bd66-81a597f86c23.png)\
+drawing to x<0 and y<0 may call main but draw clamped position?
 
 ### === per-stroke randomness ===
 
