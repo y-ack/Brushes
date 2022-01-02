@@ -1,0 +1,43 @@
+-- -*- coding: utf-8; mode: lua -*-
+-- brush optimization test script
+-- https://github.com/y-ack/Brushes
+
+function param1()
+  return "truth",0,1,0
+end
+function param2()
+  return "plot",0,1,1
+end
+
+
+local function copy_frac(a,b)
+  return math.floor(a) + (b % 1)
+end
+
+local lastDrawX = 0
+local lastDrawY = 0
+local firstDraw = true
+local ox1,ox2,oy1,oy2 = 0,0,0,0
+function main( x, y, p )
+  local w = bs_width()
+  local hw = w/2
+  local x1,x2 = x-hw, x+hw
+  local y1,y2 = y-hw, y+hw
+  if bs_param1() == 1 then bs_rect(x1,y1,w,w, 255,0,0,255) end
+
+  if not firstDraw then local distance = bs_distance(lastDrawX - x, lastDrawY - y) if distance < 0.3 then return 0 end end
+
+  for j = y1, y2 do
+    -- subtly incorrect because it copies old subpixel/fractional part
+    --if j>=oy1 and j<=oy2 then if x1>ox1 then x1 = ox2 elseif x1<ox1 then x2 = ox1 else x2 = x1 end end 
+    if j>=oy1 and j<=oy2 then if x1>ox1 then x1 = copy_frac(ox2,x1) elseif x1<ox1 then x2 = copy_frac(ox1,x2) else x2 = x1 end end 
+    for i = x1, x2 do
+      local r,g,b = bs_pixel_get(i, j)
+      if bs_param2()==1 then bs_pixel_set(i, j, 255, 16, 128, 8) end
+    end
+  end
+
+  lastDrawX, lastDrawY, firstDraw = x, y, false
+  ox1,ox2,oy1,oy2 = x1,x2,y1,y2
+  return 1
+end
