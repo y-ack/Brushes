@@ -6,14 +6,16 @@ repository for brushes (firealpaca/medibang paint lua brush scripts and krita br
 
 ## Dither4.bs / Dither8.bs
 it's a brush for ordered dithering effect.\
-![image](https://user-images.githubusercontent.com/12588017/147897709-20a17c5d-ed1f-4250-a222-d80f7f3a46f4.png)
-
+![dither brush demo](https://smilebasicsource.com/api/File/raw/26218)\
 `Dither4.bs` uses a 4x4 bayer threshold map (16 unique levels), while `Dither8.bs` uses the 8x8 threshold map (64 levels)
 
 allows pressure input, but... only uses the builtin raw pressure input. (probably need to port the elaborate pressure settings?)
 
 ### usage notes
-(todo)
+this brush does a lot of heavy pixel plotting that is very inefficient for firealpaca. there isn't really any way around it with the api, so a few warnings:
+ - drawing bg color (`use bg`) doubles the per-dab draw workload. it's suggested to instead draw a solid color layer and then the foreground color *without* `use bg`
+ - large brush widths (~100+ pixels) will be slow and may lag the program (it has to process 10000 dots per dab individually). to avoid lag, use smaller widths. `full width` mode uses the exact size specified instead of the default width-based-on-pressure behavior.
+ - by default, optimization is done to avoid drawing over the same pixels in subsequent dabs, and dab frequency is reduced to every 1-pixel distance. because this may cause slight discrepancies in the edges of strokes, and also changes behavior when using pressure for the threshold, the optimizations can be disabled by checking `accurate(slow)`. this also increases the dab frequency to improve the stroke edge accuracy.
 
 ## Sumi-WithPressure.bs
 this is a modified version of a calligraphy-type brush from medi.
