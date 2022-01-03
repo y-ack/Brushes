@@ -90,8 +90,7 @@ function main( x, y, p )
   local threshold = get_threshold(p)
 
   for j = y1, y2 do
-    if accurate==0 and j>=oy1 and j<=oy2 then if x1>ox1 then x1 = copy_frac(ox2,x2) elseif x1<ox1 then x2 = copy_frac(ox1,x1) end end 
-    for i = x1, x2 do
+if accurate==0 and j>=oy1 and j<oy2+1 then if x1>ox1 then x1 = copy_frac(ox2,x2) elseif x2<ox2 then x2 = copy_frac(ox1,x1) end end    for i = x1, x2 do
       if (dither_matrix[int_mod(j,matrix_size)*matrix_size + int_mod(i,matrix_size) + 1] >= threshold) then
         bs_pixel_set(i,j, r,g,b,a)
       elseif use_bg == 1 then
