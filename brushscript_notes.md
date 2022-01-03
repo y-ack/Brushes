@@ -123,7 +123,7 @@ let's skip the overlap region for efficiency:
     if j >= oy1 and j <= oy2 then 
       if x1 > ox1 then     --   :#[#####: ]
         x1 = ox2 -- START at old end
-      elseif x1 < ox1 then -- [ :#####]#:
+      elseif x2 < ox2 then -- [ :#####]#:
         x2 = ox1 -- END at old start
       else -- same bounds as before, SKIP row entirely
         x2 = x1 
@@ -148,13 +148,15 @@ end
 ```
 ```lua
   for j = y1, y2 do
-    if j>=oy1 and j<=oy2 then if x1>ox1 then x1 = copy_frac(ox2,x1) elseif x1<ox1 then x2 = copy_frac(ox1,x2) else x2 = x1 end end 
+    if j>=oy1 and j<=oy2 then if x1>ox1 then x1 = copy_frac(ox2,x2) elseif x2<ox2 then x2 = copy_frac(ox1,x1) else x2 = x1 end end 
     for i = x1, x2 do
       -- (per-pixel processing here)
       bs_pixel_set(i, j, 255, 255, 255, 128)
     end
   end
 ```
+
+**TODO**: these examples used code found to have bugs! needs updating\
 a demonstration can be found at https://github.com/y-ack/Brushes/blob/main/RedundantDrawSample.bs
 
 dab distance threshold only:\
