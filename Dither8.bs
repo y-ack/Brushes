@@ -1,0 +1,106 @@
+-- -*- coding: utf-8; mode: lua -*-
+-- Ordered Dithering Brush by Y
+-- https://github.com/y-ack/Brushes
+
+-- bayer 8x8 ordered dithering matrix
+local matrix_size = 8
+local dither_matrix = {0,  32, 8,  40, 2,  34, 10, 42,
+    48, 16, 56, 24, 50, 18, 58, 26,
+    12, 44, 4,  36, 14, 46, 6,  38,
+    60, 28, 52, 20, 62, 30, 54, 22,
+    3,  35, 11, 43, 1,  33, 9,  41,
+    51, 19, 59, 27, 49, 17, 57, 25,
+    15, 47, 7,  39, 13, 45, 5,  37,
+    63, 31, 55, 23, 61, 29, 53, 21}
+
+function param1()
+  n = "use pressure"
+  if bs_lang() == "ja" then n = "筆圧感知" end
+  return n, 0, 1, 0
+end
+function param2()
+  n = "threshold"
+  if bs_lang() == "ja" then n = "しきい値" end
+  return n, 0, 64, 32
+end
+function param3()
+  n = "use bg"
+  if bs_lang() == "ja" then n = "背景色描画" end
+  return n, 0, 1, 0
+end
+function param4()
+  n = "full width"
+  if bs_lang() == "ja" then n = "最大幅" end
+  return n, 0, 1, 0
+end
+function param5()
+  n = "accurate(slow)"
+  if bs_lang() == "ja" then n = "正確(低速)" end
+  return n, 0, 1, 0
+end
+
+
+-- modulo floor to int
+-- firealpaca gives x,y coordinates in pixels with fractional precision...
+local floor = math.floor
+local function int_mod(a,b)
+  -- this is a really slow division and Lua 5.1 does not have bitwise operations
+  return floor(a % b)
+end
+local function copy_frac(a,b)
+  return floor(a) + (b % 1)
+end
+local function pressure_threshold(p)
+  return 64 - p*64
+end
+
+local lastDrawX = 0
+local lastDrawY = 0
+local firstDraw = true
+local ox1,ox2,oy1,oy2 = -1,-1,-1,-1
+local get_width
+local get_threshold
+
+function main( x, y, p )
+  local accurate = bs_param5()
+  if not firstDraw then
+    local distance = bs_distance(lastDrawX - x, lastDrawY - y)
+    if distance < 1.0 - 0.5 * accurate  then return 0 end
+  else
+    -- avoid branching during main processing by holding onto function per settings
+    if bs_param4() == 1 then
+      get_width = bs_width_max
+    else 
+      get_width = bs_width
+    end
+    if bs_param1() == 1 then
+      get_threshold = pressure_threshold
+    else
+      get_threshold = bs_param2
+    end
+  end
+  local use_bg = bs_param3()
+  local r,g,b = bs_fore()
+  local bg_r,bg_g,bg_b = bs_bg()
+  local a = bs_opaque()*255 
+  local w = get_width()
+  local hw = w/2
+  local x1,x2 = x-hw, x+hw
+  local y1,y2 = y-hw, y+hw
+  local threshold = get_threshold(p)
+
+  for j = y1, y2 do
+    if accurate==0 and j>=oy1 and j<=oy2 then if x1>ox1 then x1 = copy_frac(ox2,x2) elseif x1<ox1 then x2 = copy_frac(ox1,x1) end end 
+    for i = x1, x2 do
+      if (dither_matrix[int_mod(j,matrix_size)*matrix_size + int_mod(i,matrix_size) + 1] >= threshold) then
+        bs_pixel_set(i,j, r,g,b,a)
+      elseif use_bg == 1 then
+        bs_pixel_set(i,j, bg_r,bg_g,bg_b,a)
+      end
+    end
+  end
+
+  lastDrawX, lastDrawY, firstDraw = x, y, false
+  ox1,ox2,oy1,oy2 = x1,x2,y1,y2
+  return 1
+end
