@@ -1,0 +1,49 @@
+-- -*- coding: utf-8; mode: lua -*-
+-- brush optimization test script
+-- https://github.com/y-ack/Brushes
+
+function param1()
+  return "period",1,8,2
+end
+function param2()
+  return "shift",0,7,0
+end
+function param3()
+  return "horizontal",0,1,1
+end
+function param4()
+  return "vertical",0,1,0
+end
+
+local lastDrawX = 0
+local lastDrawY = 0
+local firstDraw = true
+function main( x, y, p )
+  local period = bs_param1()
+  local shift = bs_param2()
+  local r,g,b = bs_fore()
+  local a = bs_opacity() * 255
+  local w = bs_width()
+  local hw = w/2
+  local x1,x2 = x-hw, x+hw
+  local y1,y2 = y-hw, y+hw
+  if not firstDraw then local distance = bs_distance(lastDrawX - x, lastDrawY - y) if distance < 0.3 then return 0 end end
+
+  if bs_param3()==1 then -- horizontal lines
+    local ys = math.floor(y1 / period) * period + (shift % period)
+    if (ys < y1) then ys = ys + period end
+    for j = ys,y2,period do
+      bs_rect(x1, j, w, 1, r,g,b,a)
+    end
+  end
+  if bs_param4()==1 then -- vertical lines
+    local xs = math.floor(x1 / period) * period + shift
+    if (xs < x1) then xs = xs + period end
+    for i = xs,x2,period do
+      bs_rect(i, y1, 1, w, r,g,b,a)
+    end
+  end
+
+  lastDrawX, lastDrawY, firstDraw = x, y, false
+  return 1
+end
